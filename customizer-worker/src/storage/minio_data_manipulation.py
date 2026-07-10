@@ -43,30 +43,30 @@ class MinioCRUD:
         minio_client.remove_object(bucket_name, object_name)
         print(f"Deleted '{bucket_name}/{object_name}'.")
 
-# # Example Usage
-# if __name__ == "__main__":
-#     bucket = "test-bucket"
-#     obj_name = "test/req.txt"
-#     source_file = "./requirements.txt"
-#     download_target = "./downloaded.txt"
+# Example Usage
+if __name__ == "__main__":
+    bucket = "test-bucket"
+    obj_name = "test/req.txt"
+    source_file = "./requirements.txt"
+    download_target = "./downloaded.txt"
 
-#     # 1. Create (Upload)
-#     if os.path.exists(source_file):
-#         # Call the static methods directly on the class!
-#         MinioCRUD.upload_file(bucket, obj_name, source_file)
+    # 1. Create (Upload)
+    if os.path.exists(source_file):
+        # Call the static methods directly on the class!
+        MinioCRUD.upload_file(bucket, obj_name, source_file)
         
-#         # 2. Read Metadata
-#         meta = MinioCRUD.get_metadata(bucket, obj_name)
-#         print(f"Metadata size: {meta.size} bytes")
+        # 2. Read Metadata
+        meta = MinioCRUD.get_metadata(bucket, obj_name)
+        print(f"Metadata size: {meta.size} bytes")
         
-#         # 3. Read (Download)
-#         MinioCRUD.download_file(bucket, obj_name, download_target)
+        # 3. Read (Download)
+        MinioCRUD.download_file(bucket, obj_name, download_target)
         
-#         # 4. Delete
-#         MinioCRUD.delete_file(bucket, obj_name)
+        # 4. Delete
+        MinioCRUD.delete_file(bucket, obj_name)
         
-#         # Cleanup local downloaded file for the test
-#         if os.path.exists(download_target):
-#             os.remove(download_target)
-#     else:
-#         print(f"Source file '{source_file}' not found for testing.")
+        # Cleanup local downloaded file for the test
+        if os.path.exists(download_target):
+            os.remove(download_target)
+    else:
+        print(f"Source file '{source_file}' not found for testing.")
