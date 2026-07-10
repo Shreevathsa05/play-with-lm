@@ -1,0 +1,31 @@
+# Requires Python 3.12 on Windows. xformers 0.0.29.post3 has no cp313 wheel.
+# PyTorch ROCm gfx1151 wheels. Keep these pins aligned.
+--extra-index-url https://repo.amd.com/rocm/whl/gfx1151
+torch==2.6.0
+torchvision==0.21.0
+torchaudio==2.6.0
+
+# Application runtime
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+minio
+
+# Dataset and fine-tuning stack
+datasets
+transformers
+accelerate
+peft
+trl
+unsloth==2026.7.2
+unsloth-zoo==2026.7.2
+xformers==0.0.29.post3
+bitsandbytes-rocm
+sentencepiece
+protobuf
+safetensors
+pandas
+
+# xformers is pinned to the torch 2.6 family. Newer xformers wheels can force newer torch versions.
