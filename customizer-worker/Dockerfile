@@ -31,3 +31,6 @@ COPY . /workspace/
 
 # Default behavior: run a bash shell
 CMD ["bash"]
+
+# support
+# docker run -p 9000:9000 -p 9001:9001 -e "MINIO_ROOT_USER=yourusername"  -e "MINIO_ROOT_PASSWORD=yourstrongpassword"  quay.io/minio/minio server /data --console-address ":9001"
