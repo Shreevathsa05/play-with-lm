@@ -45,10 +45,21 @@ npm run dev
 ```
 The frontend will start on `http://localhost:5173`. Open this URL in your browser to log in.
 
+### 4. Run the Python Data Processor
+Navigate to the `data-processor` directory, activate the virtual environment, install dependencies, and start the processing service:
+```bash
+cd data-processor
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
+python -m src.main
+```
+The Python service will connect to RabbitMQ and start listening for dataset jobs on `http://0.0.0.0:8000`.
+
 ---
 
 ## System Architecture
 
 - **`backend-(manager)`**: Spring Boot service handling authentication, RBAC, metadata storage (PostgreSQL), object storage orchestration (MinIO), and task queuing.
 - **`ui-(interactor)`**: Vite-based React application with authentication routing, student upload dashboard, and admin metrics view.
-- **`data-processor`**: (Upcoming) Python-based microservice that consumes normalization/standardization jobs from RabbitMQ, standardizes datasets (Alpaca/ShareGPT format), and calculates dataset health and optimization metrics.
+- **`data-processor`**: Python-based microservice that consumes normalization/standardization jobs from RabbitMQ, standardizes datasets (Alpaca/ShareGPT format), fetches HuggingFace datasets, and calculates dataset health and optimization metrics.

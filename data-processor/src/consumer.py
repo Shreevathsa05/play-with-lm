@@ -24,21 +24,20 @@ def process_message(ch, method, properties, body):
             logger.info(f"Received HuggingFace job for Dataset ID: {dataset_id}, Repo: {hf_id}")
             
             # Load from HuggingFace (limit to 10k rows for PoC)
-            logger.info(f"Downloading {hf_id} from HuggingFace...")
+            logger.info(f"Downloading {hf_id} from HuggingFace (Streaming Mode)...")
             try:
-                # Try to load the train split by default
-                dataset = load_dataset(hf_id, split="train")
+                # Try to load the train split by default with streaming
+                dataset = load_dataset(hf_id, split="train", streaming=True)
             except Exception:
                 # Fallback to loading the entire dataset dict and picking the first available split
-                dataset_dict = load_dataset(hf_id)
+                dataset_dict = load_dataset(hf_id, streaming=True)
                 first_split = list(dataset_dict.keys())[0]
                 dataset = dataset_dict[first_split]
                 
-            # Take up to 10k rows
-            limit = min(len(dataset), 10000)
-            dataset = dataset.select(range(limit))
-            parsed_data = dataset.to_list()
-            logger.info(f"Successfully loaded {len(parsed_data)} rows from HuggingFace")
+            # Stream the first 10k rows without downloading the whole gigabyte file
+            dataset = dataset.take(10000)
+            parsed_data = list(dataset)
+            logger.info(f"Successfully streamed {len(parsed_data)} rows from HuggingFace")
             
         else:
             object_name = message.get("minioObjectName")

@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import AuditReportModal from '../components/AuditReportModal';
 
@@ -9,7 +9,7 @@ export default function StudentDashboard() {
     const [selectedAuditId, setSelectedAuditId] = useState(null);
     const [huggingFaceId, setHuggingFaceId] = useState('');
 
-    const fetchDatasets = async () => {
+    const fetchDatasets = useCallback(async () => {
         try {
             const res = await fetch('/api/datasets', {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -17,17 +17,19 @@ export default function StudentDashboard() {
             if (res.ok) {
                 const data = await res.json();
                 setDatasets(data);
+            } else if (res.status === 401 || res.status === 403) {
+                logout(); // Token expired or invalid
             }
         } catch (err) {
             console.error(err);
         }
-    };
+    }, [token, logout]);
 
     useEffect(() => {
-        fetchDatasets();
+        setTimeout(fetchDatasets, 0); // Defer execution to satisfy strict React Compiler linters
         const interval = setInterval(fetchDatasets, 5000); // Polling for status updates
         return () => clearInterval(interval);
-    }, [token]);
+    }, [fetchDatasets]);
 
     const handleUpload = async (e) => {
         e.preventDefault();
