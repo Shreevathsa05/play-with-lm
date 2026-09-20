@@ -1,15 +1,17 @@
 import pika
 import json
 import logging
+import time
 import httpx
-from datasets import load_dataset
 from .config import settings
 from .storage import minio_client
 from .standardizer import SFTStandardizer, CPTStandardizer, EmbeddingStandardizer
 from .auditor import auditor
+from .hf_loader import load_hf_dataset
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def process_message(ch, method, properties, body):
     try:
@@ -21,24 +23,15 @@ def process_message(ch, method, properties, body):
         
         if source == "HUGGINGFACE":
             hf_id = message.get("huggingFaceId")
-            logger.info(f"Received HuggingFace job for Dataset ID: {dataset_id}, Repo: {hf_id}")
-            
-            # Load from HuggingFace (limit to 10k rows for PoC)
-            logger.info(f"Downloading {hf_id} from HuggingFace...")
-            try:
-                # Try to load the train split by default
-                dataset = load_dataset(hf_id, split="train")
-            except Exception:
-                # Fallback to loading the entire dataset dict and picking the first available split
-                dataset_dict = load_dataset(hf_id)
-                first_split = list(dataset_dict.keys())[0]
-                dataset = dataset_dict[first_split]
-                
-            # Take up to 10k rows
-            limit = min(len(dataset), 10000)
-            dataset = dataset.select(range(limit))
-            parsed_data = dataset.to_list()
-            logger.info(f"Successfully loaded {len(parsed_data)} rows from HuggingFace")
+            hf_config = message.get("huggingFaceConfig") or message.get("config")
+            logger.info(
+                "Received HuggingFace job for Dataset ID: %s, Repo: %s, Config: %s",
+                dataset_id,
+                hf_id,
+                hf_config,
+            )
+            parsed_data = load_hf_dataset(hf_id, config=hf_config)
+            logger.info("Successfully loaded %s rows from HuggingFace", len(parsed_data))
             
         else:
             object_name = message.get("minioObjectName")
@@ -98,23 +91,30 @@ def process_message(ch, method, properties, body):
             
         ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
 
-def start_consumer():
-    try:
-        credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                host=settings.RABBITMQ_HOST, 
-                port=settings.RABBITMQ_PORT, 
-                credentials=credentials
+def start_consumer(retries: int = 60, delay_sec: float = 2.0):
+    last_error = None
+    for attempt in range(1, retries + 1):
+        try:
+            credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters(
+                    host=settings.RABBITMQ_HOST,
+                    port=settings.RABBITMQ_PORT,
+                    credentials=credentials,
+                    heartbeat=60,
+                )
             )
-        )
-        channel = connection.channel()
+            channel = connection.channel()
 
-        channel.queue_declare(queue='dataset.processing.queue', durable=True)
-        channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(queue='dataset.processing.queue', on_message_callback=process_message)
+            channel.queue_declare(queue='dataset.processing.queue', durable=True)
+            channel.basic_qos(prefetch_count=1)
+            channel.basic_consume(queue='dataset.processing.queue', on_message_callback=process_message)
 
-        logger.info("RabbitMQ Consumer started. Waiting for messages...")
-        channel.start_consuming()
-    except Exception as e:
-        logger.error(f"Failed to start RabbitMQ consumer: {e}")
+            logger.info("RabbitMQ Consumer started. Waiting for messages...")
+            channel.start_consuming()
+            return
+        except Exception as e:
+            last_error = e
+            logger.error("Failed to start RabbitMQ consumer (attempt %s/%s): %s", attempt, retries, e)
+            time.sleep(delay_sec)
+    raise RuntimeError(f"RabbitMQ consumer failed after {retries} attempts") from last_error

@@ -1,60 +1,30 @@
-import React, { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/auth-context';
+import { apiRequest } from '../lib/api';
 
 export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const { login } = useContext(AuthContext);
-    const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            let data;
-            try {
-                data = await res.json();
-            } catch (e) {
-                data = null;
-            }
-            
-            if (res.ok && data) {
-                login(data.token);
-                navigate('/');
-            } else {
-                alert('Login failed: ' + (data?.message || 'Invalid credentials'));
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error occurred during login');
-        }
-    };
+  const handleSubmit = async (event) => {
+    event.preventDefault(); setBusy(true); setError('');
+    try {
+      const data = await apiRequest('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      login(data.token); navigate('/');
+    } catch (requestError) {
+      setError(requestError.message || 'Invalid email or password.');
+    } finally { setBusy(false); }
+  };
 
-    return (
-        <div className="flex items-center justify-center min-h-screen">
-            <div className="p-8 bg-white shadow-md rounded w-96">
-                <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1">Email</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                            className="w-full border p-2 rounded" required />
-                    </div>
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-1">Password</label>
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                            className="w-full border p-2 rounded" required />
-                    </div>
-                    <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
-                        Sign In
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
+  return (
+    <main className="login-page">
+      <section className="login-intro"><a className="brand" href="/"><span className="brand-mark" />LM Customizer</a><div><p className="announcement">TWO CLEAR WORKFLOWS · ONE SHARED GPU</p><h1>Score the data. Then tune the model.</h1><p>Keep quality review separate from training while every run stays traceable from source to published artifact.</p></div><p className="eyebrow">BUILT FOR CAMPUS AI LABS</p></section>
+      <section className="login-panel"><form className="login-card" onSubmit={handleSubmit}><p className="eyebrow">PRIVATE WORKSPACE</p><h2>Continue to the lab</h2><p>Sign in with the account issued by your administrator.</p>{error && <div className="notice notice-error">{error}</div>}<label>Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@college.edu" required autoFocus /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label><button className="button button-primary" disabled={busy}>{busy ? 'Signing in…' : 'Enter workspace'}</button></form></section>
+    </main>
+  );
 }

@@ -1,0 +1,147 @@
+[
+  {
+    "conversations": [
+      {"from": "human", "value": "What is QLoRA?"},
+      {"from": "gpt", "value": "QLoRA fine-tunes LoRA adapters on a quantized base model, usually 4-bit, so large models can train on much smaller GPUs."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "How is qlora_4bit different from plain LoRA?"},
+      {"from": "gpt", "value": "Plain LoRA keeps the base model in higher precision, while qlora_4bit loads the base in 4-bit and still trains low-rank adapters."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "I only have a 4GB GPU. Which recipe should I try first?"},
+      {"from": "gpt", "value": "Start with qlora_4bit, batch size 1, and a short max sequence length on a small instruction model."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "system", "value": "Answer briefly and accurately."},
+      {"from": "human", "value": "Does this ShareGPT mock work with SFT recipes?"},
+      {"from": "gpt", "value": "Yes. The worker maps conversations into chat-template text for fullparams, LoRA, and QLoRA."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "List the roles used in ShareGPT rows."},
+      {"from": "gpt", "value": "Common roles are human/user, gpt/assistant, and optional system."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Rewrite for clarity: 'quantize model then train adapters saves vram'"},
+      {"from": "gpt", "value": "Quantizing the base model and training adapters reduces VRAM use."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Give a tiny example of an evaluation prompt and reference."},
+      {"from": "gpt", "value": "Prompt: What is 2+2?\nReference: 4"}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "What export format is typical after QLoRA?"},
+      {"from": "gpt", "value": "Adapter/LoRA weights are the usual export; merge only if you need a single dense checkpoint."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Classify urgency: training loss became NaN."},
+      {"from": "gpt", "value": "critical"}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Name one benefit of 4-bit loading."},
+      {"from": "gpt", "value": "It shrinks base-model memory so larger models fit on consumer GPUs."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Format this as a checklist."},
+      {"from": "gpt", "value": "- Upload qlora_sft.json\n- Wait for audit COMPLETED\n- Create job with recipe qlora_4bit\n- Confirm webhook shows COMPLETED"}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Return only the recipe id for 4-bit QLoRA."},
+      {"from": "gpt", "value": "qlora_4bit"}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Explain bitsandbytes in one sentence."},
+      {"from": "gpt", "value": "bitsandbytes provides low-bit optimizers and quantization utilities used by QLoRA-style training."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Make this commit message conventional."},
+      {"from": "gpt", "value": "add mock ShareGPT dataset for QLoRA smoke tests"}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "What should I put in Hugging Face repository if I leave it blank?"},
+      {"from": "gpt", "value": "With HF_TOKEN and HF_USERNAME set, the worker can default to username/job-uuid."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Translate to German: The dataset is ready."},
+      {"from": "gpt", "value": "Der Datensatz ist bereit."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Give a safe response to a request for malware."},
+      {"from": "gpt", "value": "I can't help create or distribute malware. I can help with defensive security concepts instead."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Why use multi-turn conversations in a mock set?"},
+      {"from": "gpt", "value": "They exercise chat-template formatting and role mapping beyond single-turn Alpaca rows."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Continue this answer: QLoRA is useful because"},
+      {"from": "gpt", "value": "it combines quantization and LoRA adapters to fine-tune capable models under tight memory budgets."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Produce JSON with keys compatible and rows."},
+      {"from": "gpt", "value": "{\"compatible\": [\"fullparams\", \"lora\", \"qlora_4bit\", \"qlora_8bit\"], \"rows\": 24}"}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "What happens if star/review columns are used instead?"},
+      {"from": "gpt", "value": "The worker can rewrite review-plus-label tables into chat text, but ShareGPT or messages are clearer for instruction tuning."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Suggest an eval prompt for this dataset."},
+      {"from": "gpt", "value": "What is QLoRA?"}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Is qlora_8bit more memory hungry than qlora_4bit?"},
+      {"from": "gpt", "value": "Yes. 8-bit quantization usually needs more memory than 4-bit for the same model size."}
+    ]
+  },
+  {
+    "conversations": [
+      {"from": "human", "value": "Wrap up with a success criterion for this mock file."},
+      {"from": "gpt", "value": "Success means the dataset audits cleanly and a qlora_4bit job reaches COMPLETED on a small base model."}
+    ]
+  }
+]

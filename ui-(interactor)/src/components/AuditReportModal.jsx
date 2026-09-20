@@ -1,124 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { apiRequest } from '../lib/api';
 
 export default function AuditReportModal({ datasetId, onClose, token }) {
-    const [report, setReport] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [state, setState] = useState({ loading: true, report: null, error: '' });
+  useEffect(() => {
+    let active = true;
+    apiRequest(`/api/datasets/${datasetId}/audit`, { token })
+      .then((value) => {
+        if (!active) return;
+        let report = value;
+        if (typeof value === 'string') { try { report = JSON.parse(value); } catch { report = { raw: value }; } }
+        setState({ loading: false, report, error: '' });
+      })
+      .catch((error) => active && setState({ loading: false, report: null, error: error.message }));
+    return () => { active = false; };
+  }, [datasetId, token]);
 
-    useEffect(() => {
-        const fetchReport = async () => {
-            try {
-                const res = await fetch(`/api/datasets/${datasetId}/audit`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const text = await res.text();
-                    try {
-                        setReport(JSON.parse(text));
-                    } catch (e) {
-                        setReport({ error: "Failed to parse report JSON", raw: text });
-                    }
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchReport();
-    }, [datasetId, token]);
+  const { loading, report, error } = state;
+  const metrics = report ? [
+    ['Format', report.schema_type || 'Unknown'], ['Records', report.total_records ?? 0],
+    ['Invalid rows', report.inconsistent_rows ?? 0], ['Missing values', `${report.missing_percentage ?? 0}%`],
+    ['Duplicates', `${report.duplicate_percentage ?? 0}%`], ['Estimated tokens', report.estimated_total_tokens ?? 0],
+    ['Mean length', `${report.char_length_mean ?? 0} chars`], ['P95 length', `${report.char_length_p95 ?? 0} chars`],
+    ['Emails found', report.pii_emails_detected ?? 0], ['IP addresses found', report.pii_ips_detected ?? 0],
+  ] : [];
 
-    if (loading) {
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white p-6 rounded shadow-lg">Loading...</div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-                <div className="p-6 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
-                    <h2 className="text-2xl font-bold text-gray-800">Dataset Audit Report</h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                
-                <div className="p-6 overflow-y-auto">
-                    {!report ? (
-                        <p className="text-gray-500">No report available.</p>
-                    ) : report.error ? (
-                        <div className="bg-red-50 text-red-700 p-4 rounded border border-red-200">
-                            <strong>Error Processing Dataset:</strong> {report.error}
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            
-                            {/* Header / Score */}
-                            <div className="flex items-center gap-6 p-6 bg-blue-50 rounded-lg border border-blue-100">
-                                <div className="flex flex-col items-center justify-center bg-white rounded-full w-24 h-24 shadow-sm border-4 border-blue-200">
-                                    <span className="text-3xl font-black text-blue-600">{report.health_score || 0}</span>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800 mb-1">Health Score: {report.grade}</h3>
-                                    <p className="text-sm text-gray-600">Based on schema validation, missing values, duplicates, and data privacy.</p>
-                                </div>
-                            </div>
-                            
-                            {/* Recommendations */}
-                            {report.recommendations && report.recommendations.length > 0 && (
-                                <div>
-                                    <h4 className="text-lg font-bold text-gray-800 mb-3">Key Findings & Recommendations</h4>
-                                    <ul className="space-y-2">
-                                        {report.recommendations.map((rec, i) => (
-                                            <li key={i} className={`p-3 rounded border text-sm font-medium ${
-                                                rec.startsWith('CRITICAL') ? 'bg-red-50 border-red-200 text-red-800' :
-                                                rec.startsWith('WARNING') ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
-                                                'bg-blue-50 border-blue-200 text-blue-800'
-                                            }`}>
-                                                {rec}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
-                            {/* Metrics Grid */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 p-4 rounded border">
-                                    <h5 className="font-bold text-gray-700 mb-2 border-b pb-2">Structure</h5>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Format:</span> <span className="font-medium">{report.schema_type || 'Unknown'}</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Total Records:</span> <span className="font-medium">{report.total_records || 0}</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Invalid Rows:</span> <span className="font-medium">{report.inconsistent_rows || 0}</span></p>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded border">
-                                    <h5 className="font-bold text-gray-700 mb-2 border-b pb-2">Quality</h5>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Missing Values:</span> <span className="font-medium">{report.missing_percentage || 0}%</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Exact Duplicates:</span> <span className="font-medium">{report.duplicate_percentage || 0}%</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Est. Tokens:</span> <span className="font-medium">{report.estimated_total_tokens || 0}</span></p>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded border">
-                                    <h5 className="font-bold text-gray-700 mb-2 border-b pb-2">Statistics</h5>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Mean Length:</span> <span className="font-medium">{report.char_length_mean || 0} chars</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">P95 Length:</span> <span className="font-medium">{report.char_length_p95 || 0} chars</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Avg Turns/Dialog:</span> <span className="font-medium">{report.avg_turns_per_dialogue || 0}</span></p>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded border">
-                                    <h5 className="font-bold text-gray-700 mb-2 border-b pb-2">Privacy & Compliance</h5>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Emails Found:</span> <span className="font-medium">{report.pii_emails_detected || 0}</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">IPs Found:</span> <span className="font-medium">{report.pii_ips_detected || 0}</span></p>
-                                    <p className="text-sm flex justify-between"><span className="text-gray-500">Special Char Ratio:</span> <span className="font-medium">{report.special_char_ratio || 0}</span></p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-                
-                <div className="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end">
-                    <button onClick={onClose} className="px-6 py-2 bg-gray-800 text-white rounded font-medium hover:bg-gray-900 transition">
-                        Close
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="audit-title" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <section className="modal-card">
+        <header className="modal-header"><div><p className="eyebrow">DATASET #{datasetId}</p><h2 id="audit-title">Audit report</h2></div><button className="modal-close" onClick={onClose} aria-label="Close">×</button></header>
+        <div className="modal-body">
+          {loading && <p className="empty-state">Loading audit…</p>}
+          {(error || report?.error) && <div className="notice notice-error report-notice"><b>Audit detail</b><span>{error || report.error}</span></div>}
+          {report && !report.error && <><section className="health-panel"><div><strong>{report.schema_type || 'Unknown'}</strong></div><div><p className="eyebrow">OBJECTIVE READINESS</p><h3>Dataset preparation report</h3><p>Readiness is determined separately for each training objective. There is no universal quality score.</p></div></section>{!!report.findings?.length && <section className="report-section"><p className="eyebrow">FINDINGS</p><h3>Review items</h3><ul className="finding-list">{report.findings.map((item, index) => <li key={index}><b>{item.severity}</b> · {item.message}</li>)}</ul></section>}<section className="report-section"><p className="eyebrow">READINESS</p><dl className="audit-grid">{Object.entries(report.readiness || {}).map(([objective, value]) => <div key={objective}><dt>{objective}</dt><dd>{value.state}</dd></div>)}</dl></section><section className="report-section"><p className="eyebrow">METRICS</p><h3>Dataset profile</h3><dl className="audit-grid">{metrics.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section></>}
+          {!loading && !report && !error && <p className="empty-state">No audit is available.</p>}
         </div>
-    );
+        <footer className="modal-footer"><button className="button button-secondary" onClick={onClose}>Close report</button></footer>
+      </section>
+    </div>
+  );
 }

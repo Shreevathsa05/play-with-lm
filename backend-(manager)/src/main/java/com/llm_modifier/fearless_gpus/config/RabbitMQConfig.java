@@ -14,9 +14,15 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
+    // Dataset processing
     public static final String QUEUE_NAME = "dataset.processing.queue";
     public static final String EXCHANGE_NAME = "dataset.exchange";
     public static final String ROUTING_KEY = "dataset.routing.key";
+
+    // Fine-tuning jobs
+    public static final String FINETUNE_QUEUE_NAME = "finetuning.jobs.queue";
+    public static final String FINETUNE_EXCHANGE_NAME = "finetuning.exchange";
+    public static final String FINETUNE_ROUTING_KEY = "finetuning.routing.key";
 
     @Bean
     public Queue queue() {
@@ -31,6 +37,21 @@ public class RabbitMQConfig {
     @Bean
     public Binding binding(Queue queue, DirectExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
+    }
+
+    @Bean
+    public Queue finetuneQueue() {
+        return new Queue(FINETUNE_QUEUE_NAME, true);
+    }
+
+    @Bean
+    public DirectExchange finetuneExchange() {
+        return new DirectExchange(FINETUNE_EXCHANGE_NAME);
+    }
+
+    @Bean
+    public Binding finetuneBinding(Queue finetuneQueue, DirectExchange finetuneExchange) {
+        return BindingBuilder.bind(finetuneQueue).to(finetuneExchange).with(FINETUNE_ROUTING_KEY);
     }
 
     @Bean

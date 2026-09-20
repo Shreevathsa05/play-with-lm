@@ -9,4 +9,6 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class HuggingFaceRequest {
     private String huggingFaceId;
+    /** Optional builder config, e.g. SFT for smoltalk2. */
+    private String huggingFaceConfig;
 }

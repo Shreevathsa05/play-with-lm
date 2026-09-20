@@ -1,36 +1,29 @@
-# Use an official PyTorch base image with CUDA support
-FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+# The runtime image must use an explicitly selected, tested hardware stack.
+# Override REQUIREMENTS_FILE for a certified CPU/dry-run image.
+FROM python:3.12-slim
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
+ARG REQUIREMENTS_FILE=requirements-nvidia.txt
 
-# Set the working directory
-WORKDIR /workspace
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
+    CUSTOMIZER_DRY_RUN=0
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    wget \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential curl git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Common Python Packages for LLM Fine-tuning
-RUN pip install --no-cache-dir \
-    transformers \
-    peft \
-    accelerate \
-    bitsandbytes \
-    python-dotenv \
-    tqdm \
-    datasets \
-    trl
+COPY requirements*.txt ./
+RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
+RUN if [ "${REQUIREMENTS_FILE}" = "requirements-nvidia.txt" ] || [ "${REQUIREMENTS_FILE}" = "requirements-amd.txt" ]; then \
+      pip check && \
+      python -c "import torch, torchao, peft; from transformers.quantizers.auto import AutoHfQuantizer; from peft.import_utils import is_torchao_available; assert is_torchao_available(), 'PEFT rejected the installed TorchAO version'; print(f'Validated ML stack: torch={torch.__version__}, torchao={torchao.__version__}, peft={peft.__version__}')"; \
+    fi
 
-# Copy the application files
-# Note: we use .dockerignore to exclude the venv, output dirs, model checkpoints, etc.
-COPY . /workspace/
+COPY src ./src
 
-# Default behavior: run a bash shell
-CMD ["bash"]
+HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=20s \
+  CMD python -c "import src.consumer, src.core.config; print('ok')" || exit 1
 
-# support
-# docker run -p 9000:9000 -p 9001:9001 -e "MINIO_ROOT_USER=yourusername"  -e "MINIO_ROOT_PASSWORD=yourstrongpassword"  quay.io/minio/minio server /data --console-address ":9001"
+CMD ["python", "-m", "src.main"]

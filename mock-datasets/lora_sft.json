@@ -1,0 +1,122 @@
+[
+  {
+    "instruction": "Explain LoRA in plain language.",
+    "input": "",
+    "output": "LoRA freezes the base model and trains small low-rank adapter matrices, so fine-tuning uses far less memory than updating every weight."
+  },
+  {
+    "instruction": "When is LoRA a good default?",
+    "input": "",
+    "output": "Use LoRA when GPU memory is limited, you want faster iteration, or you need to keep multiple task adapters around one base model."
+  },
+  {
+    "instruction": "Rewrite the sentence to be more professional.",
+    "input": "pls fix the bug asap thx",
+    "output": "Please prioritize fixing this bug as soon as possible. Thank you."
+  },
+  {
+    "instruction": "Extract the product name from the text.",
+    "input": "I bought the Aurora Noise-Canceling Headphones yesterday and love them.",
+    "output": "Aurora Noise-Canceling Headphones"
+  },
+  {
+    "instruction": "Classify the sentiment as positive, neutral, or negative.",
+    "input": "The training run finished cleanly and the loss dropped steadily.",
+    "output": "positive"
+  },
+  {
+    "instruction": "Classify the sentiment as positive, neutral, or negative.",
+    "input": "The job failed after the dataset schema check.",
+    "output": "negative"
+  },
+  {
+    "instruction": "Convert this bullet list into one sentence.",
+    "input": "- upload dataset\n- wait for audit\n- start LoRA job",
+    "output": "Upload the dataset, wait for the audit to finish, then start the LoRA job."
+  },
+  {
+    "instruction": "Answer with only a number.",
+    "input": "How many bits are in a byte?",
+    "output": "8"
+  },
+  {
+    "instruction": "Write a short user-facing error message.",
+    "input": "Missing HF_TOKEN while export.hf_repo is set",
+    "output": "A Hugging Face token is required before publishing this model repository."
+  },
+  {
+    "instruction": "Name the Alpaca fields used by this mock file.",
+    "input": "",
+    "output": "instruction, optional input, and output"
+  },
+  {
+    "instruction": "Suggest a max sequence length for a tiny LoRA smoke test.",
+    "input": "GPU has 4GB VRAM and examples are short chat turns",
+    "output": "512"
+  },
+  {
+    "instruction": "Turn the facts into a concise FAQ answer.",
+    "input": "LoRA adapters are small. They can be merged later. Base weights stay frozen during training.",
+    "output": "LoRA trains small adapters on top of a frozen base model, and those adapters can be merged later if needed."
+  },
+  {
+    "instruction": "Provide a Boolean answer: true or false.",
+    "input": "LoRA updates every parameter in the transformer.",
+    "output": "false"
+  },
+  {
+    "instruction": "Create a one-line shell command description.",
+    "input": "docker compose up -d --build data-processor",
+    "output": "Rebuild and restart the data-processor service in Docker Compose."
+  },
+  {
+    "instruction": "Normalize this title casing.",
+    "input": "fine Tuning With lora On gemma",
+    "output": "Fine Tuning With LoRA On Gemma"
+  },
+  {
+    "instruction": "List two hyperparameters that strongly affect LoRA VRAM use.",
+    "input": "",
+    "output": "Sequence length and micro-batch size"
+  },
+  {
+    "instruction": "Write a Python docstring for a function named train_lora.",
+    "input": "",
+    "output": "\"\"\"Fine-tune a language model with LoRA adapters and return the trained model.\"\"\""
+  },
+  {
+    "instruction": "Map the ticket priority.",
+    "input": "Production training jobs are stuck in QUEUED for 30 minutes.",
+    "output": "high"
+  },
+  {
+    "instruction": "Summarize in under twelve words.",
+    "input": "Parameter-efficient fine-tuning methods such as LoRA reduce the number of trainable parameters while preserving most of the base model quality.",
+    "output": "LoRA trains few parameters while keeping base model quality."
+  },
+  {
+    "instruction": "Return JSON with keys recipe and format.",
+    "input": "This dataset is intended for LoRA SFT jobs.",
+    "output": "{\"recipe\": \"lora\", \"format\": \"alpaca\"}"
+  },
+  {
+    "instruction": "Fix the SQL keyword casing.",
+    "input": "select name from jobs where status = 'COMPLETED';",
+    "output": "SELECT name FROM jobs WHERE status = 'COMPLETED';"
+  },
+  {
+    "instruction": "Give a helpful next step.",
+    "input": "Dataset audit completed with a high health score.",
+    "output": "Create a LoRA fine-tuning job using this dataset and a small instruction-tuned base model."
+  },
+  {
+    "instruction": "Translate to Spanish.",
+    "input": "The model is ready.",
+    "output": "El modelo está listo."
+  },
+  {
+    "instruction": "Explain rank in LoRA briefly.",
+    "input": "",
+    "output": "Rank controls adapter capacity: higher rank can fit more task detail but uses more memory and can overfit sooner."
+  }
+]

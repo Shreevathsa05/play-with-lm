@@ -1,0 +1,146 @@
+[
+  {
+    "messages": [
+      {"role": "user", "content": "What is supervised fine-tuning?"},
+      {"role": "assistant", "content": "Supervised fine-tuning (SFT) trains a pretrained language model on labeled prompt-response pairs so it follows instructions more reliably."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Explain full-parameter fine-tuning in one sentence."},
+      {"role": "assistant", "content": "Full-parameter fine-tuning updates every weight in the model, which is expressive but memory- and compute-heavy."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "When should I prefer fullparams over LoRA?"},
+      {"role": "assistant", "content": "Prefer fullparams when you need maximum adaptation capacity, have enough GPU memory, and want the strongest possible task fit."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Rewrite this more clearly: 'Model train good with data.'"},
+      {"role": "assistant", "content": "The model trains well when the dataset is clean and well formatted."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "List three signs of a good chat dataset."},
+      {"role": "assistant", "content": "1) Clear user intents\n2) Helpful assistant replies\n3) Consistent roles and formatting across rows"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Convert Celsius 25 to Fahrenheit."},
+      {"role": "assistant", "content": "25°C is 77°F."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "What does temperature control in text generation?"},
+      {"role": "assistant", "content": "Temperature scales next-token randomness: lower values are more deterministic, higher values are more diverse."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Give a short polite refusal to a request for private passwords."},
+      {"role": "assistant", "content": "I can't help with obtaining or guessing private passwords. If you need account access, use the official reset flow."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Summarize: Fine-tuning adapts a base model to a domain using task examples."},
+      {"role": "assistant", "content": "Fine-tuning specializes a base model with task-specific examples."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Write a one-line commit message for adding dataset upload validation."},
+      {"role": "assistant", "content": "Validate uploaded datasets before queueing processing jobs."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "What is a chat template?"},
+      {"role": "assistant", "content": "A chat template converts role-tagged messages into the exact token format a model expects during training and inference."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Name two metrics useful after instruction tuning."},
+      {"role": "assistant", "content": "Instruction-following quality on held-out prompts, and reference-aware scores such as exact match or loss on target answers."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Fix the grammar: 'Them models is learning fast.'"},
+      {"role": "assistant", "content": "Those models are learning fast."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Why keep sequences short for a 270M smoke test?"},
+      {"role": "assistant", "content": "Short sequences fit small GPUs, reduce OOM risk, and still verify the training pipeline end to end."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Produce a JSON object with keys name and status for a completed job."},
+      {"role": "assistant", "content": "{\"name\": \"mock-fullparams\", \"status\": \"COMPLETED\"}"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "What column does this OpenAI-style dataset use?"},
+      {"role": "assistant", "content": "It uses a messages column with role/content turns, which SFT recipes normalize into text via the chat template."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Give an example system-style tip for concise answers."},
+      {"role": "assistant", "content": "Answer directly first, then add at most one supporting sentence."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Is JSON array upload supported for datasets?"},
+      {"role": "assistant", "content": "Yes. Upload a JSON file containing an array of objects, then wait for the data-processor audit to complete."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Translate to French: Good morning."},
+      {"role": "assistant", "content": "Bonjour."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "What batch size should I start with on a 4GB GPU?"},
+      {"role": "assistant", "content": "Start with batch size 1 and a short max sequence length, then increase only if memory allows."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Define overfitting in fine-tuning."},
+      {"role": "assistant", "content": "Overfitting means the model memorizes training examples and generalizes poorly to new prompts."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Return only the capital of Japan."},
+      {"role": "assistant", "content": "Tokyo"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Why use instruction-response pairs for fullparams?"},
+      {"role": "assistant", "content": "They teach the model to map natural-language requests to useful completions across all weights."}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "Write a tiny Python function that adds two integers."},
+      {"role": "assistant", "content": "def add(a: int, b: int) -> int:\n    return a + b"}
+    ]
+  }
+]

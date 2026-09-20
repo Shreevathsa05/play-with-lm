@@ -4,6 +4,7 @@ import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,18 +32,29 @@ public class MinioService {
 
     @PostConstruct
     public void init() {
-        minioClient = MinioClient.builder()
-                .endpoint(minioUrl)
-                .credentials(accessKey, secretKey)
-                .build();
-        try {
-            boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
-            if (!found) {
-                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+        Exception last = null;
+        for (int attempt = 1; attempt <= 30; attempt++) {
+            try {
+                minioClient = MinioClient.builder()
+                        .endpoint(minioUrl)
+                        .credentials(accessKey, secretKey)
+                        .build();
+                boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+                if (!found) {
+                    minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+                }
+                return;
+            } catch (Exception e) {
+                last = e;
+                try {
+                    Thread.sleep(2000L);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while waiting for MinIO", ie);
+                }
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Error initializing MinIO", e);
         }
+        throw new RuntimeException("Error initializing MinIO after retries", last);
     }
 
     public String uploadFile(MultipartFile file) {
@@ -60,6 +72,22 @@ public class MinioService {
             return objectName;
         } catch (Exception e) {
             throw new RuntimeException("Error uploading file to MinIO", e);
+        }
+    }
+
+    public void deleteFile(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return;
+        }
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting file from MinIO", e);
         }
     }
 }

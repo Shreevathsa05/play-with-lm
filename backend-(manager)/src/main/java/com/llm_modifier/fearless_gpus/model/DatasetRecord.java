@@ -32,11 +32,17 @@ public class DatasetRecord {
     @Column(nullable = true)
     private String huggingFaceId;
 
+    @Column(nullable = true)
+    private String huggingFaceConfig;
+
     @Column(nullable = false)
     private String status;
 
     @Column(columnDefinition = "TEXT")
     private String auditReportJson;
+
+    @Column(nullable = true)
+    private String snapshotObjectName;
 
     private LocalDateTime uploadedAt;
 

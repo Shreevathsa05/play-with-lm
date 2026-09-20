@@ -4,6 +4,9 @@
 torch==2.6.0+cu124
 torchvision==0.21.0+cu124
 torchaudio==2.6.0+cu124
+# unsloth-zoo allows any torchao>=0.13, but newer releases require newer
+# torch internals. Keep this aligned with the pinned PyTorch 2.6 stack.
+torchao==0.13.0
 
 # Application runtime
 fastapi
@@ -12,18 +15,23 @@ pydantic
 pydantic-settings
 python-dotenv
 minio
+httpx
+pika
+psutil
 
 # Dataset and fine-tuning stack
 datasets
 transformers
 accelerate
-peft
+# PEFT 0.20 requires torchao>0.16, which is incompatible with pinned torch 2.6.
+peft==0.18.0
 trl
 unsloth==2026.7.2
 unsloth-zoo==2026.7.2
 xformers==0.0.29.post3
 bitsandbytes
 sentencepiece
+sentence-transformers
 protobuf
 safetensors
 pandas

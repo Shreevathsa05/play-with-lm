@@ -1,8 +1,17 @@
 from minio import Minio
 
-minio_client = Minio(
-    endpoint="localhost:9000",
-    access_key="yourusername",
-    secret_key="yourstrongpassword",
-    secure=False
-)
+from src.core.config import get_settings
+
+
+def create_minio_client() -> Minio:
+    s = get_settings()
+    return Minio(
+        endpoint=s.minio_endpoint,
+        access_key=s.minio_access_key,
+        secret_key=s.minio_secret_key,
+        secure=s.minio_secure,
+    )
+
+
+# Module-level client for existing call sites; tests can patch this symbol.
+minio_client = create_minio_client()
