@@ -9,6 +9,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -70,7 +73,39 @@ public class JwtService {
     }
 
     private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return Keys.hmacShaKeyFor(toHmacKeyBytes(secretKey));
+    }
+
+    /**
+     * HS256 needs >= 256 bits. Accept a Base64/Base64URL key when it decodes to
+     * 32+ bytes; otherwise treat {@code jwt.secret} as a UTF-8 passphrase.
+     * Short passphrases (the local placeholder) are stretched with SHA-256.
+     */
+    private static byte[] toHmacKeyBytes(String secret) {
+        byte[] fromBase64 = decodeBase64IfPossible(secret);
+        if (fromBase64 != null && fromBase64.length >= 32) {
+            return fromBase64;
+        }
+        byte[] utf8 = secret.getBytes(StandardCharsets.UTF_8);
+        if (utf8.length >= 32) {
+            return utf8;
+        }
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(utf8);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is required to derive a JWT HMAC key", e);
+        }
+    }
+
+    private static byte[] decodeBase64IfPossible(String secret) {
+        try {
+            return Decoders.BASE64.decode(secret);
+        } catch (RuntimeException ignored) {
+            try {
+                return Decoders.BASE64URL.decode(secret);
+            } catch (RuntimeException ignoredToo) {
+                return null;
+            }
+        }
     }
 }

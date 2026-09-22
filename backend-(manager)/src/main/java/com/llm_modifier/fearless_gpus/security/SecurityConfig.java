@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -24,7 +25,13 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/webhook/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // Path-pattern matchers: default MVC matchers can fail to match /api/auth/* on Spring Boot 4.
+                .requestMatchers(
+                        PathPatternRequestMatcher.pathPattern("/api/auth/**"),
+                        PathPatternRequestMatcher.pathPattern("/api/webhook/**"),
+                        PathPatternRequestMatcher.pathPattern("/swagger-ui/**"),
+                        PathPatternRequestMatcher.pathPattern("/v3/api-docs/**")
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth-context';
 import { apiRequest } from '../lib/api';
 
@@ -23,8 +23,8 @@ export default function Login() {
 
   return (
     <main className="login-page">
-      <section className="login-intro"><a className="brand" href="/"><span className="brand-mark" />LM Customizer</a><div><p className="announcement">TWO CLEAR WORKFLOWS · ONE SHARED GPU</p><h1>Score the data. Then tune the model.</h1><p>Keep quality review separate from training while every run stays traceable from source to published artifact.</p></div><p className="eyebrow">BUILT FOR CAMPUS AI LABS</p></section>
-      <section className="login-panel"><form className="login-card" onSubmit={handleSubmit}><p className="eyebrow">PRIVATE WORKSPACE</p><h2>Continue to the lab</h2><p>Sign in with the account issued by your administrator.</p>{error && <div className="notice notice-error">{error}</div>}<label>Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@college.edu" required autoFocus /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label><button className="button button-primary" disabled={busy}>{busy ? 'Signing in…' : 'Enter workspace'}</button></form></section>
+      <section className="login-intro"><Link className="brand" to="/"><span className="brand-mark" />LM Customizer</Link><div><p className="announcement">TWO CLEAR WORKFLOWS · ONE SHARED GPU</p><h1>Score the data. Then tune the model.</h1><p>Keep quality review separate from training while every run stays traceable from source to published artifact.</p></div><p className="eyebrow">BUILT FOR CAMPUS AI LABS</p></section>
+      <section className="login-panel"><form className="login-card" onSubmit={handleSubmit}><p className="eyebrow">PRIVATE WORKSPACE</p><h2>Continue to the lab</h2><p>Sign in with your email and password.</p>{error && <div className="notice notice-error">{error}</div>}<label>Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@college.edu" required autoFocus /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label><button className="button button-primary" disabled={busy}>{busy ? 'Signing in…' : 'Enter workspace'}</button><p>Need an account? <Link className="text-link" to="/register">Create one</Link></p></form></section>
     </main>
   );
 }
