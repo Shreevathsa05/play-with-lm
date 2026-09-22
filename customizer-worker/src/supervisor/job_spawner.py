@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import codecs
 import json
+import logging
 import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -20,6 +25,64 @@ class SpawnResult:
     pid: Optional[int] = None
     cancelled: bool = False
     checkpoint_path: Optional[str] = None
+
+
+def _flush_pipe_text(buf: str, sink: list[str], label: str, pid: Optional[int], *, final: bool = False) -> str:
+    """Split on \\n and \\r so huggingface_hub/tqdm progress ticks cannot fill the pipe."""
+    while True:
+        n, r = buf.find("\n"), buf.find("\r")
+        if n < 0 and r < 0:
+            break
+        i = n if r < 0 else r if n < 0 else min(n, r)
+        line, sep, buf = buf[:i], buf[i], buf[i + 1 :]
+        if sep == "\r" and buf.startswith("\n"):
+            buf = buf[1:]
+        text = line.rstrip()
+        sink.append(text + "\n")
+        if text:
+            logger.info("job_subprocess pid=%s %s: %s", pid, label, text)
+    if len(buf) >= 8192 or (final and buf):
+        text = buf.rstrip()
+        sink.append(buf if buf.endswith("\n") else buf + "\n")
+        if text:
+            logger.info("job_subprocess pid=%s %s: %s", pid, label, text)
+        return ""
+    return buf
+
+
+def _pump_stream(stream, sink: list[str], label: str, pid: Optional[int]) -> None:
+    """Drain bytes as they arrive. readline() deadlocks on tqdm '\\r' bars (Windows 64KiB pipe)."""
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    pending = ""
+    try:
+        while True:
+            try:
+                chunk = stream.read(4096)
+            except Exception:
+                logger.exception("job_subprocess pid=%s %s read failed", pid, label)
+                break
+            if not chunk:
+                break
+            try:
+                if isinstance(chunk, str):
+                    # Defensive: some platforms wrap pipes as text; never use locale cp1252.
+                    text = chunk.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
+                else:
+                    text = decoder.decode(chunk)
+            except Exception:
+                text = chunk.decode("utf-8", "replace") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
+            pending = _flush_pipe_text(pending + text, sink, label, pid)
+        try:
+            pending = _flush_pipe_text(pending + decoder.decode(b"", final=True), sink, label, pid, final=True)
+        except Exception:
+            pending = _flush_pipe_text(pending, sink, label, pid, final=True)
+    except Exception:
+        logger.exception("job_subprocess pid=%s %s pump failed", pid, label)
+    finally:
+        try:
+            stream.close()
+        except Exception:
+            pass
 
 
 class JobSpawner:
@@ -65,6 +128,15 @@ class JobSpawner:
             run_env = os.environ.copy()
             # Avoid tokenizer/thread pools fighting Windows process spawning during dataset.map.
             run_env.setdefault("TOKENIZERS_PARALLELISM", "false")
+            run_env.setdefault("PYTHONIOENCODING", "utf-8")
+            run_env.setdefault("PYTHONUTF8", "1")
+            # Hub/tqdm '\\r' bars + the Xet uploader stall inside a piped Windows job.
+            run_env.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+            run_env.setdefault("TQDM_DISABLE", "1")
+            run_env.setdefault("HF_HUB_DISABLE_XET", "1")
+            # Transformers weight-load bars also emit Unicode to stderr on Windows.
+            run_env.setdefault("TRANSFORMERS_VERBOSITY", "error")
+            run_env.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
             # Torch 2.6 inductor expects triton_key; triton-windows 3.7 removed it.
             # Disable Unsloth/Torch compile so training uses eager kernels instead.
             if sys.platform.startswith("win"):
@@ -73,53 +145,87 @@ class JobSpawner:
             if env:
                 run_env.update(env)
 
+            # Unbuffered binary pipes: communicate() deadlocks once Torch fills ~64KiB,
+            # and readline() deadlocks on huggingface_hub tqdm which only writes '\\r'.
             proc = subprocess.Popen(
                 cmd,
                 cwd=self.cwd,
                 env=run_env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
+                bufsize=0,
             )
+            stdout_chunks: list[str] = []
+            stderr_chunks: list[str] = []
+            out_thread = threading.Thread(
+                target=_pump_stream,
+                args=(proc.stdout, stdout_chunks, "stdout", proc.pid),
+                daemon=True,
+            )
+            err_thread = threading.Thread(
+                target=_pump_stream,
+                args=(proc.stderr, stderr_chunks, "stderr", proc.pid),
+                daemon=True,
+            )
+            out_thread.start()
+            err_thread.start()
+
             started_at = time.monotonic()
+            next_heartbeat_at = started_at
             while True:
-                remaining = None if timeout_sec is None else timeout_sec - (time.monotonic() - started_at)
+                now = time.monotonic()
+                remaining = None if timeout_sec is None else timeout_sec - (now - started_at)
                 if remaining is not None and remaining <= 0:
                     self.hard_kill(proc)
-                    stdout, stderr = proc.communicate()
+                    out_thread.join(timeout=2)
+                    err_thread.join(timeout=2)
                     return SpawnResult(
                         returncode=proc.returncode if proc.returncode is not None else -9,
-                        stdout=stdout or "",
-                        stderr=(stderr or "") + "\n[timeout] hard-killed job subprocess",
+                        stdout="".join(stdout_chunks),
+                        stderr="".join(stderr_chunks) + "\n[timeout] hard-killed job subprocess",
                         pid=proc.pid,
                     )
 
-                wait_for = heartbeat_interval_sec if remaining is None else min(heartbeat_interval_sec, remaining)
-                try:
-                    stdout, stderr = proc.communicate(timeout=wait_for)
+                if proc.poll() is not None:
+                    out_thread.join(timeout=5)
+                    err_thread.join(timeout=5)
                     break
-                except subprocess.TimeoutExpired:
-                    if should_cancel is not None and should_cancel():
+
+                if should_cancel is not None and should_cancel():
+                    self.hard_kill(proc)
+                    out_thread.join(timeout=2)
+                    err_thread.join(timeout=2)
+                    return SpawnResult(
+                        returncode=proc.returncode if proc.returncode is not None else -15,
+                        stdout="".join(stdout_chunks),
+                        stderr="".join(stderr_chunks),
+                        pid=proc.pid,
+                        cancelled=True,
+                        checkpoint_path=self.latest_checkpoint(job_payload),
+                    )
+
+                if heartbeat_callback is not None and now >= next_heartbeat_at:
+                    next_heartbeat_at = now + heartbeat_interval_sec
+                    try:
+                        heartbeat_callback()
+                    except Exception:
+                        # A deleted manager record must never leave an untracked trainer.
                         self.hard_kill(proc)
-                        stdout, stderr = proc.communicate()
-                        return SpawnResult(
-                            returncode=proc.returncode if proc.returncode is not None else -15,
-                            stdout=stdout or "", stderr=stderr or "", pid=proc.pid, cancelled=True,
-                            checkpoint_path=self.latest_checkpoint(job_payload),
-                        )
-                    if heartbeat_callback is not None:
-                        try:
-                            heartbeat_callback()
-                        except Exception:
-                            # A deleted manager record must never leave an untracked trainer.
-                            self.hard_kill(proc)
-                            proc.communicate()
-                            raise
+                        out_thread.join(timeout=2)
+                        err_thread.join(timeout=2)
+                        raise
+
+                sleep_for = 0.5
+                if remaining is not None:
+                    sleep_for = min(sleep_for, max(remaining, 0.05))
+                if heartbeat_callback is not None:
+                    sleep_for = min(sleep_for, max(next_heartbeat_at - time.monotonic(), 0.05))
+                time.sleep(sleep_for)
 
             return SpawnResult(
-                returncode=proc.returncode,
-                stdout=stdout or "",
-                stderr=stderr or "",
+                returncode=proc.returncode if proc.returncode is not None else -1,
+                stdout="".join(stdout_chunks),
+                stderr="".join(stderr_chunks),
                 pid=proc.pid,
             )
         finally:
