@@ -242,6 +242,36 @@ public class FinetuneJobService {
         if (request.getBatchSize() != null) {
             payload.put("batch_size", request.getBatchSize());
         }
+
+        Map<String, Object> train = new HashMap<>();
+        if (request.getBatchSize() != null) {
+            train.put("batch_size", request.getBatchSize());
+        }
+        if (request.getEpochs() != null) {
+            train.put("epochs", request.getEpochs());
+        }
+        if (request.getMaxSteps() != null) {
+            train.put("max_steps", request.getMaxSteps());
+        }
+        if (request.getLearningRate() != null) {
+            train.put("learning_rate", request.getLearningRate());
+        }
+        if (request.getGradAccumSteps() != null) {
+            train.put("grad_accum_steps", request.getGradAccumSteps());
+        }
+        if (request.getWarmupRatio() != null) {
+            train.put("warmup_ratio", request.getWarmupRatio());
+        }
+        if (request.getTargetLoss() != null) {
+            train.put("target_loss", request.getTargetLoss());
+        }
+        if (request.getMinLossDropRatio() != null) {
+            train.put("min_loss_drop_ratio", request.getMinLossDropRatio());
+        }
+        if (!train.isEmpty()) {
+            payload.put("train", train);
+        }
+
         if (Boolean.TRUE.equals(request.getDryRun())) {
             payload.put("dry_run", true);
         }

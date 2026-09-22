@@ -24,5 +24,14 @@ public class CreateJobRequest {
     private List<Map<String, Object>> evalPrompts;
     private Integer maxSeqLength;
     private Integer batchSize;
+    private Integer epochs;
+    private Integer maxSteps;
+    private Double learningRate;
+    private Integer gradAccumSteps;
+    private Double warmupRatio;
+    /** Stop early when logged train loss is at or below this value. */
+    private Double targetLoss;
+    /** Stop early when loss has fallen by this fraction of the first logged loss (0.5 = 50%). */
+    private Double minLossDropRatio;
     private Boolean dryRun;
 }
