@@ -1,0 +1,52 @@
+[
+  {
+    "prompt": "Explain what a training heartbeat means in the UI.",
+    "completion": "A heartbeat means the worker process is still alive while a training subprocess runs.",
+    "label": true
+  },
+  {
+    "prompt": "Explain what a training heartbeat means in the UI.",
+    "completion": "A heartbeat means the model finished training and uploaded weights to Hugging Face.",
+    "label": false
+  },
+  {
+    "prompt": "Should users store API tokens inside dataset JSON?",
+    "completion": "No. Keep secrets in environment variables or a secret manager, never in training rows.",
+    "label": true
+  },
+  {
+    "prompt": "Should users store API tokens inside dataset JSON?",
+    "completion": "Yes. Putting tokens in every row makes debugging easier and is considered best practice.",
+    "label": false
+  },
+  {
+    "prompt": "Pick a good default batch size on a 4GB GPU.",
+    "completion": "Start with batch size 1 and use gradient accumulation if you need a larger effective batch.",
+    "label": true
+  },
+  {
+    "prompt": "Pick a good default batch size on a 4GB GPU.",
+    "completion": "Use batch size 128 with full-precision activations; 4GB cards handle that easily.",
+    "label": false
+  },
+  {
+    "prompt": "What schema does KTO expect?",
+    "completion": "KTO expects prompt, completion, and a boolean label marking desirable vs undesirable completions.",
+    "label": true
+  },
+  {
+    "prompt": "What schema does KTO expect?",
+    "completion": "KTO expects only an anchor/positive/negative triplet like embedding training.",
+    "label": false
+  },
+  {
+    "prompt": "Is DPO the same as KTO?",
+    "completion": "No. DPO needs paired chosen/rejected answers; KTO scores each completion independently with a boolean label.",
+    "label": true
+  },
+  {
+    "prompt": "Is DPO the same as KTO?",
+    "completion": "Yes. DPO and KTO use identical columns and can share the exact same JSON file.",
+    "label": false
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "anchor": "reduce GPU memory during fine-tuning",
+    "positive": "use LoRA or QLoRA adapters instead of full-parameter updates",
+    "negative": "increase batch size and sequence length at the same time"
+  },
+  {
+    "anchor": "preference learning with chosen and rejected answers",
+    "positive": "direct preference optimization on paired responses",
+    "negative": "masked language modeling on raw Wikipedia dumps"
+  },
+  {
+    "anchor": "binary feedback on a single completion",
+    "positive": "KTO-style prompt, completion, and boolean label rows",
+    "negative": "embedding triplets with only anchor and positive fields"
+  },
+  {
+    "anchor": "store large training blobs for workers",
+    "positive": "object storage such as MinIO with dataset object keys",
+    "negative": "paste multi-megabyte files into Postgres text columns"
+  },
+  {
+    "anchor": "queue asynchronous dataset audits",
+    "positive": "publish a message on RabbitMQ for the scoring consumer",
+    "negative": "block the HTTP request until the entire GPU train finishes"
+  },
+  {
+    "anchor": "tiny model for full-parameter smoke tests",
+    "positive": "google/gemma-3-270m-it on a short sequence length",
+    "negative": "70B dense models on a single 4GB laptop GPU"
+  },
+  {
+    "anchor": "semantic similarity training pairs",
+    "positive": "anchor and positive sentences that share meaning",
+    "negative": "unrelated strings that only share the same first letter"
+  },
+  {
+    "anchor": "detect chat-style supervised fine-tuning data",
+    "positive": "rows with conversations or messages role/content turns",
+    "negative": "rows that only contain a single prompt field"
+  }
+]

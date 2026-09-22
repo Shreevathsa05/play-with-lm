@@ -1,0 +1,32 @@
+[
+  {
+    "prompt": "Write a one-line tip for debugging a stuck fine-tune job."
+  },
+  {
+    "prompt": "List two reasons a dataset might show BLOCKED for DPO."
+  },
+  {
+    "prompt": "Suggest a short system prompt for a customer-support assistant."
+  },
+  {
+    "prompt": "Ask a clarifying question when a user says their model is too slow."
+  },
+  {
+    "prompt": "Give an example user request for summarizing a meeting transcript."
+  },
+  {
+    "prompt": "Propose a safe refusal when asked to generate malware."
+  },
+  {
+    "prompt": "Create a prompt that asks the model to extract action items from notes."
+  },
+  {
+    "prompt": "Write a prompt for translating a product FAQ into simpler English."
+  },
+  {
+    "prompt": "Ask the model to compare LoRA and QLoRA for a 4GB GPU."
+  },
+  {
+    "prompt": "Request a checklist for uploading a dataset before fine-tuning."
+  }
+]

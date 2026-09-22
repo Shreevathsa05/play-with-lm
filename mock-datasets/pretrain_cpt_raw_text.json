@@ -1,0 +1,32 @@
+[
+  {
+    "text": "LoRA freezes a pretrained network and injects small trainable low-rank matrices into attention and MLP layers. This cuts memory and makes multi-adapter serving practical."
+  },
+  {
+    "text": "QLoRA stores base weights in 4-bit precision and keeps adapters in higher precision. On a 4GB GPU it is often the only way to fine-tune a 1B-class instruct model."
+  },
+  {
+    "text": "Continued pre-training adapts a base LM to a domain corpus before instruction tuning. Keep documents reasonably long and avoid mixing chat templates into raw text."
+  },
+  {
+    "text": "Full-parameter fine-tuning updates every weight. It needs more VRAM than LoRA, so teams usually reserve it for tiny models or large multi-GPU boxes."
+  },
+  {
+    "text": "Tokenizers split text into subword units. Sequence length limits how many tokens fit in one training example; longer contexts raise memory roughly linearly."
+  },
+  {
+    "text": "Gradient accumulation simulates a larger batch without increasing peak activation memory. Many Unsloth recipes use batch size 1 with accumulation of 4 or 8."
+  },
+  {
+    "text": "Evaluation prompts should look like real user requests. Store a reference answer when you want automatic similarity or exact-match scoring after training."
+  },
+  {
+    "text": "MinIO stores dataset blobs and job snapshots. The manager records object names; workers download them during audit and training."
+  },
+  {
+    "text": "RabbitMQ decouples upload from scoring and training. Dataset jobs and fine-tune jobs use separate queues so a long train does not block audits."
+  },
+  {
+    "text": "A healthy raw-text corpus for pretrain or CPT is just clean paragraphs. No chat roles, no preference labels—only the text field."
+  }
+]

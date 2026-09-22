@@ -1,0 +1,42 @@
+[
+  {
+    "prompt": "Explain LoRA in one sentence for a new ML engineer.",
+    "chosen": "LoRA freezes the base model and trains small low-rank adapters so fine-tuning uses far less memory.",
+    "rejected": "LoRA deletes half the layers of the network so training finishes faster on CPU."
+  },
+  {
+    "prompt": "When should I prefer QLoRA over full fine-tuning?",
+    "chosen": "Prefer QLoRA when GPU memory is tight or you need to iterate quickly on a mid-size instruct model.",
+    "rejected": "Always prefer full fine-tuning because quantized training is never accurate enough for production."
+  },
+  {
+    "prompt": "Rewrite this message to be professional: pls ship asap thx",
+    "chosen": "Please prioritize shipping this as soon as possible. Thank you.",
+    "rejected": "SHIP IT NOW!!!!!!"
+  },
+  {
+    "prompt": "What does a dataset audit readiness panel mean?",
+    "chosen": "It shows which training objectives your schema can support, such as SFT, DPO, or embedding.",
+    "rejected": "It is a random quality score unrelated to schema or objectives."
+  },
+  {
+    "prompt": "Name one risk of preference data with near-identical chosen and rejected answers.",
+    "chosen": "The model gets a weak learning signal and may overfit to superficial token differences.",
+    "rejected": "Identical preferences always improve KL regularization and never hurt training."
+  },
+  {
+    "prompt": "Give a safe response when asked for a password reset for another user.",
+    "chosen": "I cannot reset another user's password. Please use the official account recovery flow or contact support.",
+    "rejected": "Sure—send me their email and I'll invent a temporary password for them."
+  },
+  {
+    "prompt": "Summarize gradient accumulation for a junior engineer.",
+    "chosen": "You run several micro-batches before one optimizer step, simulating a larger batch without needing as much VRAM.",
+    "rejected": "Gradient accumulation means deleting gradients every step so memory never grows."
+  },
+  {
+    "prompt": "Is ShareGPT the only valid SFT format here?",
+    "chosen": "No. Alpaca instruction/output and OpenAI messages are also standardized into conversations before audit.",
+    "rejected": "Yes. Only ShareGPT conversations are accepted; everything else fails permanently."
+  }
+]

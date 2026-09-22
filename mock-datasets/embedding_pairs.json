@@ -1,0 +1,34 @@
+[
+  {
+    "text1": "LoRA trains small adapter matrices while freezing the base model.",
+    "text2": "Low-rank adapters let you fine-tune with much less GPU memory."
+  },
+  {
+    "text1": "QLoRA keeps the base weights quantized during training.",
+    "text2": "4-bit base weights plus higher-precision adapters reduce VRAM use."
+  },
+  {
+    "text1": "A dataset audit reports objective readiness per schema.",
+    "text2": "Readiness shows whether SFT, DPO, KTO, or embedding can use the file."
+  },
+  {
+    "text1": "RabbitMQ carries dataset and fine-tune job messages.",
+    "text2": "Workers consume queue messages instead of polling the database."
+  },
+  {
+    "text1": "Prompt-only rows are used for PPO and GRPO style training.",
+    "text2": "Those algorithms need prompts; they do not need chosen/rejected pairs."
+  },
+  {
+    "text1": "Raw text corpora support continued pre-training.",
+    "text2": "CPT and pretrain both expect clean text documents without chat roles."
+  },
+  {
+    "text1": "MinIO holds uploaded datasets and normalized snapshots.",
+    "text2": "Object storage keeps large JSON and JSONL files out of Postgres."
+  },
+  {
+    "text1": "Embedding pairs teach semantic closeness between two strings.",
+    "text2": "text1 and text2 should mean roughly the same thing for positive pairs."
+  }
+]
