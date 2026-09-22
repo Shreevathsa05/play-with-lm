@@ -26,7 +26,9 @@ const OBJECTIVES = [
 const initialJob = {
   datasetId: '', baseModelId: 'unsloth/Llama-3.2-1B-Instruct', recipe: 'qlora_4bit', objective: 'sft', rewardModelId: '',
   modelParamsB: '1b', exportHfRepo: '', evalPrompt: '', evalReference: '',
-  dryRun: false, maxSeqLength: 512, batchSize: 1,
+  dryRun: false, maxSeqLength: '512', batchSize: '1',
+  epochs: '1', maxSteps: '', learningRate: '2e-4', gradAccumSteps: '4', warmupRatio: '0.03',
+  trainUntilTarget: true, targetLoss: '2', minLossDropPercent: '50', lossCeilingSteps: '200',
 };
 
 const date = (value) => value ? new Date(value).toLocaleString() : '—';
@@ -59,6 +61,7 @@ export default function FinetuningPage({ admin = false }) {
   const [notice, setNotice] = useState('');
   const [reportUuid, setReportUuid] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const run = async (key, action, success) => {
     setBusy(key); setNotice('');
@@ -81,11 +84,21 @@ export default function FinetuningPage({ admin = false }) {
         : ['unsloth/all-MiniLM-L6-v2', 'unsloth/gemma-3-270m-it'].includes(current.baseModelId)
           ? initialJob.baseModelId : current.baseModelId,
     modelParamsB: recipe === 'embedding' ? '22m' : recipe === 'fullparams' ? '270m' : ['22m', '270m'].includes(current.modelParamsB) ? initialJob.modelParamsB : current.modelParamsB,
+    learningRate: recipe === 'fullparams' ? '2e-5' : current.learningRate === '2e-5' ? '2e-4' : current.learningRate,
   }));
 
   const create = (event) => {
     event.preventDefault();
     const evalPrompts = job.evalPrompt.trim() ? [{ prompt: job.evalPrompt.trim(), ...(job.evalReference.trim() && { reference: job.evalReference.trim() }) }] : [];
+    const learningRate = Number(job.learningRate);
+    const warmupRatio = Number(job.warmupRatio);
+    const targetLoss = Number(job.targetLoss);
+    const minLossDropRatio = Number(job.minLossDropPercent) / 100;
+    const explicitMaxSteps = job.maxSteps === '' ? null : Number(job.maxSteps);
+    const ceiling = Number(job.lossCeilingSteps) || 200;
+    const maxSteps = job.trainUntilTarget
+      ? (explicitMaxSteps && explicitMaxSteps > 0 ? explicitMaxSteps : ceiling)
+      : explicitMaxSteps;
     run('create', () => apiRequest('/api/jobs', {
       token,
       method: 'POST',
@@ -95,6 +108,13 @@ export default function FinetuningPage({ admin = false }) {
         modelParamsB: job.modelParamsB.trim() || undefined, exportHfRepo: job.exportHfRepo.trim() || undefined,
         exportFormat: job.recipe === 'fullparams' ? 'merged_16bit' : 'lora', evalPrompts,
         dryRun: job.dryRun, maxSeqLength: Number(job.maxSeqLength), batchSize: Number(job.batchSize),
+        epochs: Number(job.epochs) || 1,
+        ...(maxSteps && maxSteps > 0 ? { maxSteps } : {}),
+        ...(Number.isFinite(learningRate) && learningRate > 0 ? { learningRate } : {}),
+        gradAccumSteps: Number(job.gradAccumSteps) || 4,
+        ...(Number.isFinite(warmupRatio) && warmupRatio >= 0 ? { warmupRatio } : {}),
+        ...(job.trainUntilTarget && Number.isFinite(targetLoss) ? { targetLoss } : {}),
+        ...(job.trainUntilTarget && Number.isFinite(minLossDropRatio) ? { minLossDropRatio } : {}),
       }),
     }), 'Fine-tune joined the FCFS queue.');
   };
@@ -136,8 +156,29 @@ export default function FinetuningPage({ admin = false }) {
           <div className="section-heading"><div><p className="eyebrow">CONFIGURATION</p><h2>Connect data and destination</h2></div><p>Use a scored dataset. Hugging Face publication requires a valid worker-side token.</p></div>
           <div className="configuration-grid">
             <div className="form-card"><span className="card-index">01</span><h3>Inputs</h3><label>Training objective<select value={job.objective} onChange={(event) => setJob({ ...job, objective: event.target.value })}>{OBJECTIVES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><label>Scored dataset<select value={job.datasetId} onChange={(event) => setJob({ ...job, datasetId: event.target.value })} required><option value="">Select approved data</option>{datasets.map((dataset) => <option key={dataset.id} value={dataset.id}>#{dataset.id} · {dataset.filename}</option>)}</select></label><label>Base model ID<input value={job.baseModelId} onChange={(event) => setJob({ ...job, baseModelId: event.target.value })} required /></label><label>Parameter hint<input value={job.modelParamsB} onChange={(event) => setJob({ ...job, modelParamsB: event.target.value })} placeholder="270m or 1b (maximum)" pattern="(?:[0-9]+(?:\\.[0-9]+)?[mMbB]?)" title="Use a numeric size up to 1B, for example 270m or 1b." /><small className="muted">GTX 1650 profile: models above 1B are rejected by the worker.</small></label>{job.objective === 'ppo' && <label>Reward model ID<input value={job.rewardModelId} onChange={(event) => setJob({ ...job, rewardModelId: event.target.value })} required placeholder="Reward model repository or path" /></label>}</div>
-            <div className="form-card"><span className="card-index">02</span><h3>Output</h3><label>Hugging Face repository<input value={job.exportHfRepo} onChange={(event) => setJob({ ...job, exportHfRepo: event.target.value })} placeholder="Shreevathsa05/<job-uuid> · leave blank to auto" /></label><label>Sequence length<input type="number" min="64" max="32768" value={job.maxSeqLength} onChange={(event) => setJob({ ...job, maxSeqLength: event.target.value })} /></label><label>Micro batch<input type="number" min="1" max="64" value={job.batchSize} onChange={(event) => setJob({ ...job, batchSize: event.target.value })} /></label></div>
+            <div className="form-card"><span className="card-index">02</span><h3>Output</h3><label>Hugging Face repository<input value={job.exportHfRepo} onChange={(event) => setJob({ ...job, exportHfRepo: event.target.value })} placeholder="Shreevathsa05/<job-uuid> · leave blank to auto" /></label><label>Sequence length<input type="text" inputMode="numeric" autoComplete="off" value={job.maxSeqLength} onChange={(event) => setJob({ ...job, maxSeqLength: event.target.value })} placeholder="512" /></label><label>Micro batch<input type="text" inputMode="numeric" autoComplete="off" value={job.batchSize} onChange={(event) => setJob({ ...job, batchSize: event.target.value })} placeholder="1" /></label></div>
             {job.recipe !== 'embedding' && <div className="form-card"><span className="card-index">03</span><h3>Evaluation</h3><label>Evaluation prompt<textarea rows="3" value={job.evalPrompt} onChange={(event) => setJob({ ...job, evalPrompt: event.target.value })} placeholder="Optional baseline and fine-tuned comparison" /></label><label>Expected reference<input value={job.evalReference} onChange={(event) => setJob({ ...job, evalReference: event.target.value })} placeholder="Optional reference answer" /></label></div>}
+          </div>
+          <div className="advanced-fold">
+            <button type="button" className={`advanced-toggle ${showAdvanced ? 'open' : ''}`} aria-expanded={showAdvanced} onClick={() => setShowAdvanced((open) => !open)}>
+              <span>Advanced training controls</span>
+              <small>{showAdvanced ? 'Hide' : 'Show'} epochs, LR, loss target, and step ceiling</small>
+            </button>
+            {showAdvanced && (
+              <div className="form-card advanced-panel">
+                <label>Epochs<input type="text" inputMode="numeric" autoComplete="off" value={job.epochs} onChange={(event) => setJob({ ...job, epochs: event.target.value })} disabled={job.trainUntilTarget} placeholder="1" /><small className="muted">{job.trainUntilTarget ? 'Ignored while loss target is on — step ceiling controls length.' : 'Full passes over the dataset.'}</small></label>
+                <label>Max steps<input type="text" inputMode="numeric" autoComplete="off" value={job.maxSteps} onChange={(event) => setJob({ ...job, maxSteps: event.target.value })} placeholder={job.trainUntilTarget ? 'Optional override of step ceiling' : 'Leave blank to use epochs'} /></label>
+                <label>Learning rate<input type="text" inputMode="decimal" autoComplete="off" value={job.learningRate} onChange={(event) => setJob({ ...job, learningRate: event.target.value })} placeholder="2e-4" /></label>
+                <label>Grad accumulation<input type="text" inputMode="numeric" autoComplete="off" value={job.gradAccumSteps} onChange={(event) => setJob({ ...job, gradAccumSteps: event.target.value })} placeholder="4" /></label>
+                <label>Warmup ratio<input type="text" inputMode="decimal" autoComplete="off" value={job.warmupRatio} onChange={(event) => setJob({ ...job, warmupRatio: event.target.value })} placeholder="0.03" /></label>
+                <label className="toggle-control"><input type="checkbox" checked={job.trainUntilTarget} onChange={(event) => setJob({ ...job, trainUntilTarget: event.target.checked })} /><span><b>Train until loss target</b><small>Keeps training until loss ≤ target or drop %, up to the step ceiling (not epoch count).</small></span></label>
+                {job.trainUntilTarget && <>
+                  <label>Target loss<input type="text" inputMode="decimal" autoComplete="off" value={job.targetLoss} onChange={(event) => setJob({ ...job, targetLoss: event.target.value })} placeholder="2" /></label>
+                  <label>Min loss drop %<input type="text" inputMode="decimal" autoComplete="off" value={job.minLossDropPercent} onChange={(event) => setJob({ ...job, minLossDropPercent: event.target.value })} placeholder="50" /></label>
+                  <label>Step ceiling<input type="text" inputMode="numeric" autoComplete="off" value={job.lossCeilingSteps} onChange={(event) => setJob({ ...job, lossCeilingSteps: event.target.value })} placeholder="200" /><small className="muted">Hard stop if the loss goal is never hit. Raise this for demos (e.g. 200–500).</small></label>
+                </>}
+              </div>
+            )}
           </div>
           <div className="launch-bar"><label className="toggle-control"><input type="checkbox" checked={job.dryRun} onChange={(event) => setJob({ ...job, dryRun: event.target.checked })} /><span><b>Simulation only</b><small>Leave this off to train, export, evaluate, and publish for real.</small></span></label><button className="button button-primary" disabled={busy === 'create' || !datasets.length}>{busy === 'create' ? 'Joining queue…' : job.dryRun ? 'Run simulation' : 'Train model now'}</button></div>
         </section>

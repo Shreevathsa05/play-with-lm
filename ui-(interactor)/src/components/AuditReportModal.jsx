@@ -32,7 +32,49 @@ export default function AuditReportModal({ datasetId, onClose, token }) {
         <div className="modal-body">
           {loading && <p className="empty-state">Loading audit…</p>}
           {(error || report?.error) && <div className="notice notice-error report-notice"><b>Audit detail</b><span>{error || report.error}</span></div>}
-          {report && !report.error && <><section className="health-panel"><div><strong>{report.schema_type || 'Unknown'}</strong></div><div><p className="eyebrow">OBJECTIVE READINESS</p><h3>Dataset preparation report</h3><p>Readiness is determined separately for each training objective. There is no universal quality score.</p></div></section>{!!report.findings?.length && <section className="report-section"><p className="eyebrow">FINDINGS</p><h3>Review items</h3><ul className="finding-list">{report.findings.map((item, index) => <li key={index}><b>{item.severity}</b> · {item.message}</li>)}</ul></section>}<section className="report-section"><p className="eyebrow">READINESS</p><dl className="audit-grid">{Object.entries(report.readiness || {}).map(([objective, value]) => <div key={objective}><dt>{objective}</dt><dd>{value.state}</dd></div>)}</dl></section><section className="report-section"><p className="eyebrow">METRICS</p><h3>Dataset profile</h3><dl className="audit-grid">{metrics.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section></>}
+          {report && !report.error && (
+            <>
+              <section className="health-panel">
+                <div>
+                  <span className="eyebrow">Detected schema</span>
+                  <strong className="schema-badge">{report.schema_type || 'Unknown'}</strong>
+                </div>
+                <div>
+                  <p className="eyebrow">OBJECTIVE READINESS</p>
+                  <h3>Dataset preparation report</h3>
+                  <p>Readiness is determined separately for each training objective. There is no universal quality score.</p>
+                </div>
+              </section>
+              {!!report.findings?.length && (
+                <section className="report-section">
+                  <p className="eyebrow">FINDINGS</p>
+                  <h3>Review items</h3>
+                  <ul className="finding-list">
+                    {report.findings.map((item, index) => (
+                      <li key={index}><b>{item.severity}</b> · {item.message}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <section className="report-section">
+                <p className="eyebrow">READINESS</p>
+                <dl className="audit-grid">
+                  {Object.entries(report.readiness || {}).map(([objective, value]) => (
+                    <div key={objective}><dt>{objective}</dt><dd>{value.state}</dd></div>
+                  ))}
+                </dl>
+              </section>
+              <section className="report-section">
+                <p className="eyebrow">METRICS</p>
+                <h3>Dataset profile</h3>
+                <dl className="audit-grid">
+                  {metrics.map(([label, value]) => (
+                    <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                  ))}
+                </dl>
+              </section>
+            </>
+          )}
           {!loading && !report && !error && <p className="empty-state">No audit is available.</p>}
         </div>
         <footer className="modal-footer"><button className="button button-secondary" onClick={onClose}>Close report</button></footer>
