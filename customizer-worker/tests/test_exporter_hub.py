@@ -26,6 +26,21 @@ class TestExporterHubPush(unittest.TestCase):
         model.push_to_hub.assert_called_once()
         tokenizer.push_to_hub.assert_called_once()
 
+    def test_push_uploads_saved_folder(self):
+        api = MagicMock()
+        with patch("huggingface_hub.HfApi", return_value=api):
+            repo = UnslothModelExporter.push_to_hub(
+                MagicMock(), MagicMock(),
+                repo_id="user/my-model", token="secret", folder_path="E:/export",
+            )
+        self.assertEqual(repo, "user/my-model")
+        api.upload_folder.assert_called_once_with(
+            folder_path="E:/export",
+            repo_id="user/my-model",
+            token="secret",
+            repo_type="model",
+        )
+
     def test_push_requires_repo(self):
         with self.assertRaises(ValueError):
             UnslothModelExporter.push_to_hub(MagicMock(), MagicMock(), repo_id="")

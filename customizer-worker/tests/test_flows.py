@@ -239,6 +239,7 @@ class TestFlows(unittest.TestCase):
         notify_started.assert_called_once_with(
             "push", "user/model", "minio://jobs/push/exports", unittest.mock.ANY
         )
+        self.assertTrue(exporter.push_to_hub.call_args.kwargs["folder_path"].endswith("export"))
 
     def test_default_hf_push_target_on_export(self):
         exporter = MagicMock()

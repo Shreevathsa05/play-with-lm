@@ -114,6 +114,18 @@ class UnslothModelExporter:
         if not repo_id or not str(repo_id).strip():
             raise ValueError("repo_id is required for Hugging Face push")
 
+        folder_path = kwargs.pop("folder_path", None)
+        if folder_path:
+            from huggingface_hub import HfApi
+
+            HfApi().upload_folder(
+                folder_path=folder_path,
+                repo_id=repo_id,
+                token=token,
+                repo_type="model",
+            )
+            return repo_id
+
         push_kwargs = dict(kwargs)
         if token:
             push_kwargs["token"] = token
