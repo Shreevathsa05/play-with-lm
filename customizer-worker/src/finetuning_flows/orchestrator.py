@@ -402,6 +402,7 @@ def _export_and_maybe_push(
                 repo_id=hf_repo,
                 token=token,
                 private=bool(export_cfg.get("private", True)),
+                folder_path=local_dir,
             )
             hf_push = {
                 "status": "published",
@@ -644,9 +645,11 @@ def run_sft_style(
             "eval": eval_report,
         }
 
+    log.info("importing_training_stack")
     from src.finetuning_modules.model_loaders import UnslothModelLoader
     from src.finetuning_modules.model_trainers import UnslothModelTrainer
 
+    log.info("dataset_loading")
     dataset = _load_dataset(payload)
     log.info("dataset_loaded")
 
@@ -706,6 +709,26 @@ def run_sft_style(
         train_cfg.setdefault("optimizer", "adamw_torch")
         train_cfg.setdefault("force_float32", True)
         train_cfg.setdefault("grad_accum_steps", 4)
+
+    # Coerce JSON numbers so UI/manager values actually reach SFTConfig.
+    for key in ("batch_size", "grad_accum_steps", "max_steps", "logging_steps", "seed"):
+        if key in train_cfg and train_cfg[key] is not None:
+            train_cfg[key] = int(train_cfg[key])
+    for key in ("epochs", "learning_rate", "warmup_ratio", "target_loss", "min_loss_drop_ratio"):
+        if key in train_cfg and train_cfg[key] is not None:
+            train_cfg[key] = float(train_cfg[key])
+
+    log.info(
+        "train_config",
+        epochs=train_cfg.get("epochs"),
+        max_steps=train_cfg.get("max_steps"),
+        learning_rate=train_cfg.get("learning_rate"),
+        batch_size=train_cfg.get("batch_size"),
+        grad_accum_steps=train_cfg.get("grad_accum_steps"),
+        target_loss=train_cfg.get("target_loss"),
+        min_loss_drop_ratio=train_cfg.get("min_loss_drop_ratio"),
+    )
+
     output_dir = train_cfg.pop("output_dir", os.path.join(scratch_dir, "checkpoints"))
     UnslothModelTrainer.train(
         model=model,

@@ -3,7 +3,7 @@ import os
 import sys
 
 from trl import SFTConfig, SFTTrainer
-from transformers import TrainerCallback
+from transformers import TrainerCallback, TrainerControl, TrainerState, TrainingArguments
 from unsloth import is_bfloat16_supported
 
 
@@ -14,6 +14,67 @@ def _default_dataset_num_proc() -> Optional[int]:
     if sys.platform.startswith("win"):
         return None
     return 2
+
+
+class LossTargetCallback(TrainerCallback):
+    """Stop when loss hits an absolute floor or has fallen by a relative fraction."""
+
+    def __init__(
+        self,
+        *,
+        target_loss: Optional[float] = None,
+        min_loss_drop_ratio: Optional[float] = None,
+        on_progress: Optional[Callable[..., None]] = None,
+    ):
+        self.target_loss = target_loss
+        self.min_loss_drop_ratio = min_loss_drop_ratio
+        self.on_progress = on_progress
+        self.initial_loss: Optional[float] = None
+
+    def on_log(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        logs: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> None:
+        if not logs or "loss" not in logs:
+            return
+        loss = float(logs["loss"])
+        if self.initial_loss is None or self.initial_loss <= 0:
+            self.initial_loss = loss
+
+        drop_ratio = 0.0
+        if self.initial_loss and self.initial_loss > 0:
+            drop_ratio = (self.initial_loss - loss) / self.initial_loss
+
+        hit_target = self.target_loss is not None and loss <= float(self.target_loss)
+        hit_drop = (
+            self.min_loss_drop_ratio is not None
+            and drop_ratio >= float(self.min_loss_drop_ratio)
+        )
+        if not (hit_target or hit_drop):
+            return
+
+        reason = "target_loss" if hit_target else "loss_drop"
+        print(
+            f"Stopping early ({reason}): loss={loss:.4f} "
+            f"initial={self.initial_loss:.4f} drop={drop_ratio:.1%}"
+        )
+        if self.on_progress is not None:
+            try:
+                self.on_progress(
+                    step=state.global_step,
+                    total=state.max_steps if state.max_steps and state.max_steps > 0 else None,
+                    loss=loss,
+                    stop_reason=reason,
+                    initial_loss=self.initial_loss,
+                    drop_ratio=round(drop_ratio, 4),
+                )
+            except Exception:
+                pass
+        control.should_training_stop = True
 
 
 class UnslothModelTrainer:
@@ -42,7 +103,7 @@ class UnslothModelTrainer:
                 on_progress(**fields)
 
         return _ProgressCallback()
-    
+
     @staticmethod
     def train(
         model: Any,
@@ -62,40 +123,15 @@ class UnslothModelTrainer:
         packing: bool = False,
         optimizer: str = "adamw_8bit",
         force_float32: bool = False,
+        warmup_ratio: float = 0.03,
+        target_loss: Optional[float] = None,
+        min_loss_drop_ratio: Optional[float] = None,
         on_progress: Optional[Callable[..., None]] = None,
         resume_from_checkpoint: Optional[str] = None,
         **kwargs: Any
     ) -> Any:
-        """
-        Trains the given model on the provided dataset.
-        
-        Args:
-            model: PEFT-wrapped model to train.
-            tokenizer: Tokenizer corresponding to the model.
-            dataset: HuggingFace Dataset for training.
-            output_dir (str): Local directory to write checkpoints.
-            dataset_text_field (str): The column in the dataset containing the text.
-            max_seq_length (int): Maximum sequence length.
-            learning_rate (float): Initial learning rate for AdamW.
-            batch_size (int): Training batch size per device.
-            grad_accum_steps (int): Gradient accumulation steps.
-            epochs (float): Number of training epochs.
-            max_steps (int): Maximum training steps. If positive, overrides epochs.
-            logging_steps (int): Logging frequency.
-            seed (int): Random seed for training.
-            dataset_num_proc (int): Number of workers for dataset tokenization.
-                Use None to disable multiprocessing (required on Windows with datasets 4.x).
-            packing (bool): Whether to pack multiple short sequences into a single block.
-            force_float32 (bool): Disable fp16/bf16 autocast. Needed for Gemma full-FT when
-                Unsloth patches expect matching activation/weight dtypes.
-            **kwargs: Additional arguments for TrainingArguments or SFTTrainer.
-            
-        Returns:
-            Any: The training results or trainer output.
-        """
         print(f"Initializing trainer for model output: '{output_dir}'...")
-        
-        # Auto-detect float type support
+
         is_bf16 = is_bfloat16_supported()
         use_bf16 = bool(is_bf16) and not force_float32
         use_fp16 = (not is_bf16) and not force_float32
@@ -113,13 +149,18 @@ class UnslothModelTrainer:
         if "dataset_num_proc" in training_args_kwargs:
             dataset_num_proc = training_args_kwargs.pop("dataset_num_proc")
         print(f"dataset_num_proc: {dataset_num_proc!r} (None disables map multiprocessing)")
-        
-        # TRL 0.24+ keeps SFT-specific preprocessing options in SFTConfig.
+        if target_loss is not None or min_loss_drop_ratio is not None:
+            print(
+                f"Loss early-stop enabled: target_loss={target_loss!r} "
+                f"min_loss_drop_ratio={min_loss_drop_ratio!r} "
+                f"(ceiling max_steps={max_steps}, epochs={epochs})"
+            )
+
         training_args = SFTConfig(
             per_device_train_batch_size=batch_size,
             gradient_accumulation_steps=grad_accum_steps,
-            warmup_ratio=0.03,
-            num_train_epochs=epochs if max_steps <= 0 else 1.0, # SFTTrainer uses num_train_epochs only if max_steps is negative
+            warmup_ratio=float(warmup_ratio),
+            num_train_epochs=epochs if max_steps <= 0 else 1.0,
             max_steps=max_steps,
             learning_rate=learning_rate,
             fp16=use_fp16,
@@ -132,20 +173,28 @@ class UnslothModelTrainer:
             output_dir=output_dir,
             save_strategy=training_args_kwargs.pop("save_strategy", "steps"),
             save_steps=int(training_args_kwargs.pop("save_steps", 50)),
-            report_to="none", # Disable reporting (wandb/tensorboard) to avoid worker environment crashes
+            report_to="none",
             max_length=max_seq_length,
             dataset_num_proc=dataset_num_proc,
             packing=packing,
             dataset_text_field=dataset_text_field,
             **training_args_kwargs,
         )
-        
-        # Configure SFTTrainer
+
         trainer_kwargs = dict(kwargs.get("trainer_kwargs", {}))
+        callbacks = list(trainer_kwargs.get("callbacks") or [])
         progress_callback = UnslothModelTrainer._build_progress_callback(on_progress)
         if progress_callback is not None:
-            callbacks = list(trainer_kwargs.get("callbacks") or [])
             callbacks.append(progress_callback)
+        if target_loss is not None or min_loss_drop_ratio is not None:
+            callbacks.append(
+                LossTargetCallback(
+                    target_loss=target_loss,
+                    min_loss_drop_ratio=min_loss_drop_ratio,
+                    on_progress=on_progress,
+                )
+            )
+        if callbacks:
             trainer_kwargs["callbacks"] = callbacks
 
         trainer = SFTTrainer(
@@ -155,9 +204,9 @@ class UnslothModelTrainer:
             args=training_args,
             **trainer_kwargs,
         )
-        
+
         print("Starting training...")
         train_result = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         print("Training completed successfully!")
-        
+
         return train_result

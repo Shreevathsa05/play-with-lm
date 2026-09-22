@@ -17,12 +17,17 @@ _LAST_POST: dict[str, float] = {}
 _EVENT_PHASES = {
     "job_received": "Worker received job from queue",
     "pipeline_start": "Starting fine-tune pipeline",
+    "importing_training_stack": "Importing training stack (Torch/Unsloth)",
+    "dataset_loading": "Loading dataset from storage",
     "dataset_loaded": "Dataset loaded from storage",
     "model_loading": "Loading base model",
     "model_loaded": "Base model loaded",
     "baseline_eval_complete": "Baseline evaluation complete",
+    "train_config": "Training config applied",
     "train_progress": "Training in progress",
     "train_complete": "Model training finished",
+    "target_loss": "Loss target reached",
+    "loss_drop": "Loss drop target reached",
     "eval_complete": "Post-training evaluation complete",
     "hf_push_complete": "Model published to Hugging Face",
     "pipeline_complete": "Pipeline finished successfully",
@@ -40,7 +45,12 @@ def event_phase(record: dict[str, Any]) -> str:
         step = record.get("step")
         total = record.get("total")
         loss = record.get("loss")
+        stop = record.get("stop_reason")
         parts = [base]
+        if stop == "target_loss":
+            parts = ["Loss target reached"]
+        elif stop == "loss_drop":
+            parts = ["Loss drop target reached"]
         if step is not None and total:
             parts.append(f"step {step}/{total}")
         elif step is not None:
@@ -114,7 +124,12 @@ def attach_progress_sink(log: LogCarrier, job_uuid: str) -> None:
             "pipeline_start",
             "pipeline_complete",
             "pipeline_failed",
+            "importing_training_stack",
+            "dataset_loading",
             "dataset_loaded",
+            "model_loading",
+            "model_loaded",
+            "train_config",
             "train_complete",
             "eval_complete",
             "hf_push_complete",
