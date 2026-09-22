@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.annotation.PostConstruct;
-import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.util.UUID;
 
 @Service
@@ -60,13 +60,13 @@ public class MinioService {
     public String uploadFile(MultipartFile file) {
         try {
             String objectName = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
-            InputStream inputStream = file.getInputStream();
+            byte[] bytes = file.getBytes();
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucketName)
                             .object(objectName)
-                            .stream(inputStream, file.getSize(), -1)
-                            .contentType(file.getContentType())
+                            .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
+                            .contentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream")
                             .build()
             );
             return objectName;
