@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import uuid
 from typing import Any, Callable, Optional
 
@@ -167,10 +168,11 @@ def start_consumer(
             channel.queue_declare(queue=settings.finetuning_queue, durable=True)
             channel.basic_qos(prefetch_count=1)
 
-            def _on_message(ch, method, properties, body):
+            def _process_message(ch, delivery_tag, body):
                 try:
                     handle_job_message(body, supervisor=supervisor)
-                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                    if connection.is_open:
+                        connection.add_callback_threadsafe(lambda: ch.basic_ack(delivery_tag=delivery_tag))
                 except Exception as exc:
                     logger.exception("Failed processing finetune job: %s", exc)
                     try:
@@ -180,7 +182,20 @@ def start_consumer(
                             notify_manager(job_uuid, "FAILED", {"error": str(exc)})
                     except Exception:
                         logger.exception("Failed to notify manager of consumer error")
-                    ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
+                    if connection.is_open:
+                        connection.add_callback_threadsafe(
+                            lambda: ch.basic_reject(delivery_tag=delivery_tag, requeue=False)
+                        )
+
+            def _on_message(ch, method, properties, body):
+                # Keep Pika's I/O thread free to service heartbeats during training.
+                # Prefetch=1 admits only one unacknowledged job on this channel.
+                threading.Thread(
+                    target=_process_message,
+                    args=(ch, method.delivery_tag, body),
+                    name="finetune-job",
+                    daemon=True,
+                ).start()
 
             channel.basic_consume(queue=settings.finetuning_queue, on_message_callback=_on_message)
             logger.info("Finetune consumer started on queue=%s", settings.finetuning_queue)

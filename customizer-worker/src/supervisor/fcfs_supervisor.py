@@ -45,7 +45,8 @@ class FCFSSupervisor:
         log = LogCarrier(job_uuid)
         recipe = job_payload.get("recipe", "")
         objective = str((job_payload.get("plan") or {}).get("objective") or job_payload.get("objective") or "sft").lower()
-        if not bool(job_payload.get("dry_run") or job_payload.get("dryRun")):
+        dry_run = bool(job_payload.get("dry_run") or job_payload.get("dryRun"))
+        if not dry_run:
             from src.capabilities import probe
             capability = probe().get("objectives", {}).get(objective)
             if capability is not None and not capability["available"]:
@@ -55,18 +56,28 @@ class FCFSSupervisor:
                     details={"objective": objective, "capability": capability},
                 ))
 
-        snap = self.monitor.snapshot()
-        gate_result = self.gate.evaluate(
-            base_model_id=job_payload.get("base_model_id") or job_payload.get("baseModelId") or "",
-            recipe=recipe,
-            model_params_b=job_payload.get("model_params_b") or job_payload.get("modelParamsB"),
-            architecture=job_payload.get("architecture"),
-            unsloth_supported=bool(job_payload.get("unsloth_supported", True)),
-            max_seq_length=int(job_payload.get("max_seq_length") or job_payload.get("maxSeqLength") or 2048),
-            batch_size=int(job_payload.get("batch_size") or job_payload.get("batchSize") or 2),
-            free_vram_mb=snap.free_vram_mb,
-            free_ram_mb=snap.free_ram_mb,
-        )
+        if dry_run:
+            # Simulations do not import a training runtime, load a model, or allocate
+            # GPU/RAM.  They must not remain in the real-training capacity queue.
+            gate_result = GateResult(
+                GateDecision.ACCEPT,
+                "Dry run bypasses runtime and capacity admission.",
+                recipe,
+                details={"dry_run": True},
+            )
+        else:
+            snap = self.monitor.snapshot()
+            gate_result = self.gate.evaluate(
+                base_model_id=job_payload.get("base_model_id") or job_payload.get("baseModelId") or "",
+                recipe=recipe,
+                model_params_b=job_payload.get("model_params_b") or job_payload.get("modelParamsB"),
+                architecture=job_payload.get("architecture"),
+                unsloth_supported=bool(job_payload.get("unsloth_supported", True)),
+                max_seq_length=int(job_payload.get("max_seq_length") or job_payload.get("maxSeqLength") or 2048),
+                batch_size=int(job_payload.get("batch_size") or job_payload.get("batchSize") or 2),
+                free_vram_mb=snap.free_vram_mb,
+                free_ram_mb=snap.free_ram_mb,
+            )
         log.info("gate_decision", decision=gate_result.decision.value, reason=gate_result.reason)
 
         if gate_result.decision in (GateDecision.REJECT, GateDecision.SUGGEST):

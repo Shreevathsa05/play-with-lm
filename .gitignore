@@ -1,0 +1,24 @@
+# Environment files and credentials
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Private planning/documentation
+/docs/
+
+# Runtime, Docker Compose, and application logs
+docker-compose-start.*.log
+*.log
+*.out
+*.err
+**/log/
+**/logs/
+**/out/
+**/output/
+
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+.venv/
+unsloth_compiled_cache/

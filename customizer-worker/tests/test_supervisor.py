@@ -79,6 +79,26 @@ class TestFCFSSupervisor(unittest.TestCase):
         self.assertEqual(statuses, ["WAITING", "RUNNING"])
         spawner.spawn.assert_called_once()
 
+    def test_dry_run_bypasses_capacity_wait(self):
+        mon = ResourceMonitor(vram_probe=lambda: (1, 4096), ram_probe=lambda: (1, 16384))
+        spawner = MagicMock()
+        spawner.spawn.return_value = SpawnResult(returncode=0, stdout="", stderr="", pid=42)
+        superv = FCFSSupervisor(monitor=mon, spawner=spawner)
+
+        result = superv.run_job(
+            {
+                "job_uuid": "j-dry-run",
+                "base_model_id": "google/gemma-3-270m-it",
+                "recipe": "qlora_8bit",
+                "model_params_b": "270m",
+                "dry_run": True,
+            }
+        )
+
+        self.assertEqual(result.gate.decision, GateDecision.ACCEPT)
+        self.assertEqual(result.waited_sec, 0.0)
+        spawner.spawn.assert_called_once()
+
 
 class TestJobSpawnerHardKill(unittest.TestCase):
     def test_hard_kill_already_exited(self):

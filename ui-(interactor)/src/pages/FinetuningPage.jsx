@@ -166,7 +166,7 @@ export default function FinetuningPage({ admin = false }) {
             </button>
             {showAdvanced && (
               <div className="form-card advanced-panel">
-                <label>Epochs<input type="text" inputMode="numeric" autoComplete="off" value={job.epochs} onChange={(event) => setJob({ ...job, epochs: event.target.value })} disabled={job.trainUntilTarget} placeholder="1" /><small className="muted">{job.trainUntilTarget ? 'Ignored while loss target is on — step ceiling controls length.' : 'Full passes over the dataset.'}</small></label>
+                <label>Epochs<input type="text" inputMode="numeric" autoComplete="off" value={job.epochs} onChange={(event) => setJob({ ...job, epochs: event.target.value })} readOnly={job.trainUntilTarget} aria-readonly={job.trainUntilTarget} placeholder="1" /><small className="muted">{job.trainUntilTarget ? 'Ignored while loss target is on — step ceiling controls length.' : 'Full passes over the dataset.'}</small></label>
                 <label>Max steps<input type="text" inputMode="numeric" autoComplete="off" value={job.maxSteps} onChange={(event) => setJob({ ...job, maxSteps: event.target.value })} placeholder={job.trainUntilTarget ? 'Optional override of step ceiling' : 'Leave blank to use epochs'} /></label>
                 <label>Learning rate<input type="text" inputMode="decimal" autoComplete="off" value={job.learningRate} onChange={(event) => setJob({ ...job, learningRate: event.target.value })} placeholder="2e-4" /></label>
                 <label>Grad accumulation<input type="text" inputMode="numeric" autoComplete="off" value={job.gradAccumSteps} onChange={(event) => setJob({ ...job, gradAccumSteps: event.target.value })} placeholder="4" /></label>

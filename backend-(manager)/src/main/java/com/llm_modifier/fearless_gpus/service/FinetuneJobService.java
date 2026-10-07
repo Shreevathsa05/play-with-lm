@@ -367,6 +367,17 @@ public class FinetuneJobService {
     public void handleWebhook(String jobUuid, JobWebhookRequest request) {
         FinetuneJob job = jobRepository.findByJobUuid(jobUuid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
+        // A redelivered message must not start a second training process while
+        // the first attempt is still running (or after it has finished).
+        if ("CHECKING".equalsIgnoreCase(request.getStatus()) && job.getAttemptId() != null) {
+            Map<String, Object> claim = objectMapper.convertValue(request.getReport(),
+                    new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String, Object>>() {});
+            Object incomingAttempt = claim == null ? null : claim.get("attempt_id");
+            if (!job.getAttemptId().equals(String.valueOf(incomingAttempt))) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Job has already been claimed by another worker attempt");
+            }
+        }
         // Heartbeats may repeat the same status/report. Touch the timestamp
         // explicitly so Hibernate still persists proof that the worker is alive.
         job.setUpdatedAt(LocalDateTime.now());
